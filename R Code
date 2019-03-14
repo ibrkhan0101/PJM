@@ -1,0 +1,425 @@
+library(gtools)
+library(moments)
+library(urca)
+library(systemfit)
+library(rugarch)
+library(stats)
+library(tseries)
+library(stargazer)
+library(htmlTable)
+Library(MSwM)
+library(fracdiff)
+library(rugarch)
+########################################################
+#Choose Operating System
+#Windows
+Assets <- read.csv("C:/Users/ibrah/Desktop/Assets.csv")
+fil <- read.csv("C:/Users/ibrah/Desktop/PJM.csv")
+dat<-abs(fil[,2:73])
+########################################################
+#Mac OSX
+#Assets<-read.csv("~/Desktop/thss/Assets.csv")
+#fil<- read.csv("~/Desktop/thss/PJM.csv")
+#dat<-abs(fil[,2:73])
+#######################################################
+#Cleaning Data
+for(j in 1:72){
+for(i in 1:3166){
+if(as.numeric(dat[i,j])==0){dat[i,j]<-mean(dat[,j])}
+}}
+#Generating Log-Return Series from Prices
+#Descriptive Statistics
+#Financial Assets
+ass<-Assets
+retmat<-mat.or.vec(2160,4)
+for(j in 1:4){
+retmat[,j]<-diff(log(ass[,j]))
+}
+#Electricity Prices
+elec<-cbind(dat[,3],dat[,17],dat[,27],dat[,41])
+retmate<-mat.or.vec(length(dat[,2])-1,4)
+for(j in 1:4){
+retmate[,j]<-diff(log(elec[,j]))
+}
+##################################################
+returns<-data.frame(diff(log(as.matrix(dat[,1:48]))))
+returnsa<-data.frame(diff(log(as.matrix(Assets[,1:4]))))
+#retstd
+retstd<-as.data.frame(mat.or.vec(48,1))
+stdret<-as.data.frame(mat.or.vec(3165,48))
+69
+for(i in 1:48){
+retstd[i,]<-var(returns[,i])^.5
+stdret[,i]<-returns[,i]/retstd[i,1]
+}
+pp<-t(dat[49:72])
+dim(pp)<-c(75984,1)
+#moments for all prices and loads
+mat<-dat
+m<-4
+ss<-mat.or.vec(dim(mat)[2],m)
+for( i in 1:dim(mat)[2]){
+s<-as.data.frame(all.moments(mat[,i],order.max=4))
+ss[i,]<-t(s[2:(m+1),])
+}
+RTmom<-ss[1:24,]
+DAmom<-ss[25:48,]
+LDmom<-ss[49:72,]
+RTmom<-ss[1:24,]
+DAmom<-ss[25:48,]
+LDmom<-ss[49:72,]
+momements<-cbind(RTmom,DAmom,LDmom)
+#Generating Moments for Financial Assets
+xx<-retmat
+m<-4
+fmoments<-mat.or.vec(dim(xx)[2],m)
+for( i in 1:dim(xx)[2]){
+s<-as.data.frame(all.moments(xx[,i],order.max=4))
+fmoments[i,]<-t(s[2:(m+1),])
+}
+lbstats<-mat.or.vec(6,4)
+astats<-mat.or.vec(3,4)
+for(j in 1:4){
+#Annualized Volatility
+astats[1,j]<-fmoments[2,j]*(dim(xx)[1])^.5
+#Jarque Bera Test
+astats[3,j]<-jarque.test(xx[,j])$statistic
+}
+fdesstats<-rbind(t(fmoments),astats)
+#Generating Moments Electricity
+yy<-retmate
+m<-4
+emoments<-mat.or.vec(dim(yy)[2],m)
+for( i in 1:dim(yy)[2]){
+s<-as.data.frame(all.moments(yy[,i],order.max=4))
+emoments[i,]<-t(s[2:(m+1),])
+}
+estats<-mat.or.vec(3,4)
+for(j in 1:4){
+#Annualized Volatility
+estats[2,j]<-emoments[2,j]*(dim(yy)[1])^.5
+#Jarque Bera Test
+estats[3,j]<-jarque.test(mat[,j])$statistic
+70
+}
+edesstats<-rbind(t(emoments),estats)
+descstats<-cbind(fdesstats,edesstats)
+htmlTable(descstats)
+#LB Tests for log returns and prices
+lbastats<-mat.or.vec(3,4)
+lbestats<-mat.or.vec(3,4)
+finseries<-cbind(Assets[1:2160,])
+elecseries<-cbind(mate[1:3165,])
+for( j in 1:4){
+lbastats[1,j]<-Box.test(arima(finseries[,j],c(1,0,0))$residuals, lag = 30,
+type = c( "Ljung-Box"))$statistic
+lbastats[2,j]<-Box.test(arima(finseries[,j],c(1,0,0))$residuals, lag = 60,
+type = c( "Ljung-Box"))$statistic
+lbastats[3,j]<-Box.test(arima(finseries[,j],c(1,0,0))$residuals, lag = 90,
+type = c( "Ljung-Box"))$statistic
+lbestats[1,j]<-Box.test(arima(elecseries[,j],c(1,0,0))$residuals, lag = 30,
+type = c( "Ljung-Box"))$statistic
+lbestats[2,j]<-Box.test(arima(elecseries[,j],c(1,0,0))$residuals, lag = 60,
+type = c( "Ljung-Box"))$statistic
+lbestats[3,j]<-Box.test(arima(elecseries[,j],c(1,0,0))$residuals, lag = 90,
+type = c( "Ljung-Box"))$statistic
+}
+lbstat<-cbind(lbastats,lbestats)
+lbresults<-
+cbind(rbind(lbastats[,1:4],lbastats[,5:8]),rbind(lbestats[,1:4],lbestats[,5:8
+]))
+#moments of return series
+mat<-retmate
+m<-4
+ess<-mat.or.vec(dim(mat)[2],m)
+for( i in 1:dim(mat)[2]){
+s<-as.data.frame(all.moments(mat[,i],order.max=4))
+ess[i,]<-t(s[2:(m+1),])
+}
+#Generating Average Daily Prices and Volumes
+meanrt<-as.data.frame(mat.or.vec(24,1))
+meanda<-as.data.frame(mat.or.vec(24,1))
+meanfp<-as.data.frame(mat.or.vec(24,1))
+meanvo<-as.data.frame(mat.or.vec(24,1))
+for(i in 1:24){
+meanrt[i,1]<-mean(dat[,i])
+meanda[i,1]<-mean(dat[,i+24])
+meanfp[i,1]<-mean(dat[,i+24]-dat[,i])
+meanvo[i,1]<-mean(dat[,i+48])
+}
+avgs<-as.data.frame(cbind(meanrt,meanda,meanfp,meanvo))
+names(avgs)<-c("RT","DA","RT - DA","Volume")
+at<-seq(1,24,1)
+plot.ts(avgs[,2],xlab="Hour",ylab="DA ($)",main="")
+axis(at=at,tick = .04167,side = 1)
+barplot(avgs[,3],xlab="Hour",ylim = c(-3,3),ylab="DA-RT
+($)",main="");abline(h=0)
+71
+#Unit Roots
+par(mfrow=c(2,2))
+plot(acf(dat[,3],lag.max = 100),ci.col="red",main = "Off-Peak RT")
+plot(acf(dat[,17],lag.max = 100),ci.col="red",main = "Peak RT")
+plot(acf(dat[,24],lag.max = 100),ci.col="red",main = "Off-Peak DA")
+plot(acf(dat[,41],lag.max = 100),ci.col="red",main = "Peak DA")
+plot(acf(diff(dat[,3]),lag.max = 100),ci.col="red",main = "Off-Peak (1-L)RT")
+plot(acf(diff(dat[,17]),lag.max = 100),ci.col="red",main = "Peak (1-
+L)RT")
+plot(acf(diff(dat[,24]),lag.max = 100),ci.col="red",main = "Off-Peak (1-
+L)DA")
+plot(acf(diff(dat[,41]),lag.max = 100),ci.col="red",main = "Peak (1-L)DA")
+#Lo's Modified Test
+## rs.test calculates the statistic of the modified R/S test
+##
+## x: time series
+## q: number of lags included for calculation of covariances
+##
+## significance level: 0.05, 0.1
+## critical value: 1.747, 1.62
+##
+## References: Lo (1991), Long-term Memory in Stock Market Prices,
+##Econometrica 59, 1279--1313
+##
+losmodtest<-function(x, q){
+xbar <- mean(x)
+N <- length(x)
+r <- max(cumsum(x-xbar)) - min(cumsum(x-xbar))
+variance <- NULL
+for (i in 1:q){variance <- c(variance,sum((x[1:(N-i)]-xbar)*(x[(1+i):N]-
+xbar)))}
+s<-(1/N)*sum((x-xbar)^2) + (2/N)*sum((1-(1:q)/(q+1))*variance)
+rs<-r/(sqrt(s)*sqrt(N))
+return(rs)
+}
+##Testing for I(1) with ADF, PP, and KPSS##
+ADFresults<-as.data.frame(mat.or.vec(25,18))
+PPresults<-as.data.frame(mat.or.vec(25,18))
+KPSSresults<-as.data.frame(mat.or.vec(25,18))
+Losmodresults<-as.data.frame(mat.or.vec(25,18))
+gphdestres<-as.data.frame(mat.or.vec(25,18))
+q<-16
+dats<-cbind(dat[,1:24],meanrt,dat[,25:48],meanda)
+for(j in seq(1,17,2)){
+if(j==1){datum<-dats[185:551,]}#2008
+if(j==3){datum<-dats[552:915,]}#2002
+if(j==5){datum<-dats[916:1280,]}#2010
+if(j==7){datum<-dats[1281:1645,]}#2011
+if(j==9){datum<-dats[1646:2011,]}#2012
+if(j==11){datum<-dats[2012:2376,]}#2013
+if(j==13){datum<-dats[2377:2741,]}#2014
+if(j==15){datum<-dats[2742:3106,]}#2015
+if(j==17){datum<-dats[185:3106,]} #Full Sample
+72
+for(i in 1:25){
+ADFresults[i,j]<-round(ur.df(datum[,i],type = "drift",lags =
+15)@teststat,digits = 3)
+ADFresults[i,j+1]<-round(ur.df(datum[,i+24],type = "drift",lags =
+15)@teststat,digits = 3)
+PPresults[i,j]<-round(ur.pp(datum[,i],type = "Z-tau",model =
+"constant",lags = "long")@teststat,digits = 2)
+PPresults[i,j+1]<-round(ur.pp(datum[,i+24],type = "Z-tau", model =
+"constant",lags = "long")@teststat,digits = 2)
+KPSSresults[i,j]<-round(ur.kpss(datum[,i],type =
+"mu",lags="long")@teststat,digits = 3)
+KPSSresults[i,j+1]<-round(ur.kpss(datum[,i+24],type =
+"mu",lags="long")@teststat,digits = 3)
+Losmodresults[i,j]<-round(losmodtest(datum[,i],q),digits=3)
+Losmodresults[i,j+1]<-round(losmodtest(datum[,i+24],q),digits=3)
+gphdestres[i,j]<-round(fdGPH(datum[,i],bandw.exp=.5)$d,digits = 3)
+gphdestres[i,j+1]<-round(fdGPH(datum[,i+24],bandw.exp=.5)$d,digits = 3)
+}
+}
+##Testing for I(2) with ADF, PP, and KPSS with Differenced Series##
+#Initilizing data frames
+dADFresults<-as.data.frame(mat.or.vec(25,18))
+dPPresults<-as.data.frame(mat.or.vec(25,18))
+dKPSSresults<-as.data.frame(mat.or.vec(25,18))
+dLosmodresults<-as.data.frame(mat.or.vec(25,18))
+dgphdestres<-as.data.frame(mat.or.vec(25,18))
+q<-16
+dats<-cbind(dat[,1:24],meanrt,dat[,25:48],meanda)
+dats<-diff(as.matrix(dats))
+for(j in seq(1,17,2)){
+if(j==1){datum<-dats[185:551,]}#2008
+if(j==3){datum<-dats[552:915,]}#2002
+if(j==5){datum<-dats[916:1280,]}#2010
+if(j==7){datum<-dats[1281:1645,]}#2011
+if(j==9){datum<-dats[1646:2011,]}#2012
+if(j==11){datum<-dats[2012:2376,]}#2013
+if(j==13){datum<-dats[2377:2741,]}#2014
+if(j==15){datum<-dats[2742:3105,]}#2015
+if(j==17){datum<-dats[185:3105,]} #Full Sample
+for(i in 1:25){
+dADFresults[i,j]<-round(ur.df(datum[,i],type = "drift",lags =
+15)@teststat,digits = 3)
+dADFresults[i,j+1]<-round(ur.df(datum[,i+24],type = "drift",lags =
+15)@teststat,digits = 3)
+dPPresults[i,j]<-round(ur.pp(datum[,i],type = "Z-tau",model =
+"constant",lags = "long")@teststat,digits = 2)
+dPPresults[i,j+1]<-round(ur.pp(datum[,i+24],type = "Z-tau", model =
+"constant",lags = "long")@teststat,digits = 2)
+dKPSSresults[i,j]<-round(ur.kpss(datum[,i],type =
+"mu",lags="long")@teststat,digits = 3)
+dKPSSresults[i,j+1]<-round(ur.kpss(datum[,i+24],type =
+"mu",lags="long")@teststat,digits = 3)
+dLosmodresults[i,j]<-round(losmodtest(datum[,i],q),digits=3)
+dLosmodresults[i,j+1]<-round(losmodtest(datum[,i+24],q),digits=3)
+dgphdestres[i,j]<-round(fdGPH(datum[,i],bandw.exp=.5)$d,digits = 3)
+dgphdestres[i,j+1]<-round(fdGPH(datum[,i+24],bandw.exp=.5)$d,digits = 3)
+73
+}
+}
+#Checking tool
+ad<-mat.or.vec(25,18)
+#Specify critical value cval and testname
+#Use ADFresults PPresults KPSSresults Losmodresults gphdestres
+cval<-
+testname<-
+for(i in 1:25){
+for(j in 1:18){
+ifelse(testname[i,j]<=(cval),ad[i,j]<-1, ad[i,j]<-0)
+}
+}
+#ACFs of diff Price
+par(mfrow=c(2,2))
+plot(acf(diff(dat[,3])),main="Off-Peak (1-L)RT",ci.col="red")
+plot(acf(diff(dat[,17])),main="Peak (1-L)RT",ci.col="red")
+plot(acf(diff(dat[,27])),main="Off-Peak (1-L)DA",ci.col="red")
+plot(acf(diff(dat[,41])),main="Peak (1-L)DA",ci.col="red")
+plot(diff(dat[,3]))
+ts.plot(diff(dat[,17]))
+ts.plot(diff(dat[,27]))
+ts.plot(diff(dat[,41]))
+plot(acf(meanrt,lag.max = 300),ci.col="red",main="ACF of Average Daily RT
+Prices")
+plot(acf(meanda,lag.max = 300),ci.col="red",main="ACF of Average Daily DA
+Prices")
+#Qstats Prices
+ll<-150
+qstats<-mat.or.vec(ll,4)
+qlstats<-mat.or.vec(ll,4)
+for(i in 1:4){
+for( j in 1:ll){
+#Prices
+qstats[j,i]<-Box.test(arima(diff(mate[,i]),order=c(1,0,0))$residuals, lag =
+j, type = c("Ljung-Box"))$p.value
+#LogPrices
+qlstats[j,i]<-Box.test(arima(diff(log(mate[,i])),order=c(1,0,0))$residuals,
+lag = j, type = c("Ljung-Box"))$p.value
+}
+}
+#Creating a Dummy and Time Variable Begin#
+dum<-mat.or.vec(2922,12)
+j<-1
+dum[1,1]<-1
+for( i in 2:2922){
+dum[i,j]<-1
+if((i/(j*30)==1)){j<-j+1}
+if(j==13){j<-1}
+}
+names(dum)<-
+74
+c("January","February","March","April","May","June","July","August","Septembe
+r","October","November","December")
+t<-seq(1:2922)
+#Creating a Dummy and Time Variable End#
+##Convexity Regression Begin##
+#Average On Peak Price
+l=2922
+sPKP<-as.data.frame(mat.or.vec(l,1))
+colnames(PKP)<-"sPKP"
+#Average On Peak Price
+l=2922
+fPKP<-as.data.frame(mat.or.vec(l,1))
+colnames(PKP)<-"fPKP"
+#Average Daily Load/Quanity
+ADQ<-as.data.frame(mat.or.vec(l,1))
+colnames(ADQ)<-"ADQ"
+for( i in 185:3106){
+j<-i-184
+sPKP[j,1]<-rowMeans(dat[i,17:19])
+ADQ[j,1]<-rowMeans(dat[i,49:72])
+}
+#Average Daily Load/Quanity
+ADQ<-as.data.frame(mat.or.vec(l,1))
+colnames(ADQ)<-"ADQ"
+for( i in 185:3106){
+j<-i-184
+fPKP[j,1]<-rowMeans(dat[i,41:43])
+ADQ[j,1]<-rowMeans(dat[i,49:72])
+}
+#Using RT for price variable in line with Bessminder and Lemmon (2002)
+reg<-lm(log(sPKP[,1]) ~ log(ADQ[,1]))
+dreg<-lm(log(sPKP[,1])~log(ADQ[,1])+t+dum-1)
+treg<-lm(log(sPKP[,1]) ~ log(ADQ[,1])+t)
+##Convexity Regression End##
+#Fourier Seasonality Begin#
+#Hours 4, 17, 28, 42
+t<-seq(1:3166)
+y<-41
+x<-dat[,y]
+#k<-kernel("daniell",m=10)
+#spec.pgram(x,k)
+#Full model
+fsm<-lm(x~cos(2*pi*t/360)+sin(2*pi*t/360)+cos(2*pi*t/180)+sin(2*pi*t/180) +
+cos(2*pi*t/7)+sin(2*pi*t/7) + t)
+coefs<-as.matrix(fsm$coefficients)
+tss<-
+as.matrix(cbind(1,cos(2*pi*t/360),sin(2*pi*t/360),cos(2*pi*t/180),sin(2*pi*t/
+180),cos(2*pi*t/7),sin(2*pi*t/7) , t))
+xx<-ts(tss%*%coefs,start = c(2007),end = c(2016),frequency =350 )
+yy<-ts(x,start = c(2007),end = c(2016),frequency=350)
+pp<-ts.plot(cbind(xx,yy),col=c("red","black"),ylab="Price
+($/Mwh)",xlab="Year",ylim=c(0,250),main="Peak DA Price: Actual vs Estimated")
+legend("topright", pp, legend=c("Actual",
+"Estimated"),lty=1,col=c("black","red"),cex=.75)
+75
+#GARCH w/Normal Distribution Begin#
+#Enter nx4 matrix of return series
+mm<-retmate
+spec = ugarchspec(
+variance.model = list(model = "sGARCH", garchOrder = c(1,1)),
+mean.model = list(armaOrder = c(1,1), include.mean = TRUE),
+distribution.model = "norm")
+#std for student t, and norm for normal
+# solnp , nlminb , gosolnp
+fit1<-ugarchfit(spec,data=mm[,1],solver="gosolnp")
+fit2<-ugarchfit(spec,data=mm[,2],solver="solnp")
+fit3<-ugarchfit(spec,data=mm[,3],solver="solnp")
+fit4<-ugarchfit(spec,data=mm[,4],solver="solnp")
+#Coefficients
+Aparch_fin<-
+as.data.frame(cbind((fit1@fit$matcoef),(fit2@fit$matcoef),(fit3@fit$matcoef),
+(fit4@fit$matcoef)))
+#LOg Likelihood
+llh_aparch<-
+cbind((fit1@fit$LLH),(fit2@fit$LLH),(fit3@fit$LLH),(fit4@fit$LLH))
+#ENgle NG
+signbias_aparch<-
+cbind((signbias(fit1)),(signbias(fit2)),(signbias(fit3)),(signbias(fit4)))
+#GARCH w/Normal Distribution End#
+#APARCH w/Student t Distribution Begin#
+#Enter nx4 matrix of return series
+mm<-retmate
+spec = ugarchspec(
+variance.model = list(model = "apGARCH", garchOrder = c(1,1)),
+mean.model = list(armaOrder = c(1,1), include.mean = TRUE),
+distribution.model = "std")
+#std for student t, and norm for normal
+# solnp , nlminb , gosolnp
+fit1<-ugarchfit(spec,data=mm[,1],solver="gosolnp")
+fit2<-ugarchfit(spec,data=mm[,2],solver="solnp")
+fit3<-ugarchfit(spec,data=mm[,3],solver="solnp")
+fit4<-ugarchfit(spec,data=mm[,4],solver="solnp")
+#Coefficients
+Aparch_fin<-
+as.data.frame(cbind((fit1@fit$matcoef),(fit2@fit$matcoef),(fit3@fit$matcoef),
+(fit4@fit$matcoef)))
+#LOg Likelihood
+llh_aparch<-
+cbind((fit1@fit$LLH),(fit2@fit$LLH),(fit3@fit$LLH),(fit4@fit$LLH))
+#ENgle NG
+signbias_aparch<-
+cbind((signbias(fit1)),(signbias(fit2)),(signbias(fit3)),(signbias(fit4)))
+#APARCH w/Student t Distribution End#
+#AR(1) Markov Regime Switching Function#
+msmFit(lm(y_t~(y_t-1),k=2, sw=c(T,T,T),control=list(parallel=F))
